@@ -1,4 +1,4 @@
-import { Context } from "https://deno.land/x/oak@v10.6.0/mod.ts";
+import { Context, helpers } from "https://deno.land/x/oak@v10.6.0/mod.ts";
 
 const BASE_URL = "http://localhost:8080";
 
@@ -29,11 +29,12 @@ const getNextUrl = (header: string) => {
 
 export const listUsers = async (ctx: Context) => {
   try {
-    const since: string = ctx.request.url.searchParams.get("since") || "0";
+    const { since } = helpers.getQuery(ctx, { mergeParams: true });
 
     const response = await fetch(
       `https://api.github.com/users?per_page=6&since=${since}`,
     );
+
     if (!response.ok) {
       throw new ServiceError("Fetch error", response.status);
     }
@@ -45,7 +46,26 @@ export const listUsers = async (ctx: Context) => {
 
     ctx.response.body = { next: next_url, data: json };
   } catch (error) {
-    ctx.response.status = error.code;
+    ctx.response.status = error.code || 500;
+    ctx.response.body = { error: error.message };
+  }
+};
+
+export const userDetails = async (ctx: Context) => {
+  try {
+    const { username } = await helpers.getQuery(ctx, { mergeParams: true });
+
+    const response = await fetch(`https://api.github.com/users/${username}`);
+
+    if (!response.ok) {
+      throw new ServiceError("Fetch error", response.status);
+    }
+
+    const json = await response.json();
+
+    ctx.response.body = { data: json };
+  } catch (error) {
+    ctx.response.status = error.code || 500;
     ctx.response.body = { error: error.message };
   }
 };
