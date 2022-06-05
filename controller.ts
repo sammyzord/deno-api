@@ -69,3 +69,36 @@ export const userDetails = async (ctx: Context) => {
     ctx.response.body = { error: error.message };
   }
 };
+
+export const userRepos = async (ctx: Context) => {
+  try {
+    const { username, page } = await helpers.getQuery(ctx, {
+      mergeParams: true,
+    });
+
+    if (!username) {
+      throw new ServiceError("Username is required", 400);
+    }
+
+    const response = await fetch(
+      `https://api.github.com/users/${username}/repos?per_page=6&page=${page}`,
+    );
+
+    if (!response.ok) {
+      throw new ServiceError("Fetch error", response.status);
+    }
+
+    const json = await response.json();
+
+    const next_page: number = page ? Number(page) + 1 : 2;
+    const next_url = `${BASE_URL}/users/${username}/repos?page=${next_page}`;
+
+    ctx.response.body = {
+      next: next_url,
+      data: json,
+    };
+  } catch (error) {
+    ctx.response.status = error.code || 500;
+    ctx.response.body = { error: error.message };
+  }
+};
