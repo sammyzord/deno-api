@@ -11,14 +11,19 @@ class ServiceError extends Error {
   }
 }
 
-const getNextUrl = (header: string) => {
+const hasNext = (header: string): string => {
   const list = header.split(",");
   const item = list.find((item) => item.match(/.+rel="next"$/));
   if (!item) {
     return "";
   }
+  return item;
+};
 
-  const pattern = /.+since=(\d)/;
+const getNextUrl = (header: string) => {
+  const item = hasNext(header);
+
+  const pattern = /.+since=(\d+)/;
   const match = item.match(pattern);
   if (!match) {
     return "";
@@ -81,7 +86,7 @@ export const userRepos = async (ctx: Context) => {
     }
 
     const response = await fetch(
-      `https://api.github.com/users/${username}/repos?per_page=6&page=${page}`,
+      `https://api.github.com/users/${username}/repos?per_page=4&page=${page}`,
     );
 
     if (!response.ok) {
@@ -90,8 +95,14 @@ export const userRepos = async (ctx: Context) => {
 
     const json = await response.json();
 
+    const next = response.headers.get("link") || "";
+
+    const has_next = hasNext(next);
+
     const next_page: number = page ? Number(page) + 1 : 2;
-    const next_url = `${BASE_URL}/users/${username}/repos?page=${next_page}`;
+    const next_url: string | null = has_next
+      ? `${BASE_URL}/users/${username}/repos?page=${next_page}`
+      : null;
 
     ctx.response.body = {
       next: next_url,
