@@ -1,6 +1,6 @@
 import { Context, helpers } from "https://deno.land/x/oak@v10.6.0/mod.ts";
 
-const BASE_URL = "http://localhost:8080";
+const BASE_URL = Deno.env.get("BASE_URL") || "http://localhost:8080";
 
 class ServiceError extends Error {
   code: number;
